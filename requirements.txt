@@ -1,0 +1,2 @@
+nicegui[native]>=3.17,<4
+

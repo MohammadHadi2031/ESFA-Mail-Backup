@@ -1,0 +1,16 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+Output/
+*.spec.bak
+
+# Code signing material - never commit
+*.pfx
+*.p12
+*.key
+*.cer
+*.crt
