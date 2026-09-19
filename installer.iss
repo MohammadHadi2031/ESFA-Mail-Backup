@@ -38,5 +38,5 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "powershell.exe"; Parameters: "-NoProfile -NonInteractive -Command &quot;'ESFA Mail Backup','Hetzner Mail Backup' | ForEach-Object { Unregister-ScheduledTask -TaskName $_ -Confirm:$false -ErrorAction SilentlyContinue }&quot;"; Flags: runhidden waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command ""Get-ScheduledTask -TaskName 'ESFA Mail Backup','Hetzner Mail Backup' -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false"""; RunOnceId: "RemoveScheduledTasks"; Flags: runhidden waituntilterminated
 
