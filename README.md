@@ -16,7 +16,9 @@ It ships with a Persian, right-to-left interface. It is preconfigured for [Hetzn
 - One-click export to `.mbox`, one file per mail folder, ready to import into Thunderbird
 - Passwords encrypted with Windows DPAPI; only the same Windows user can decrypt them
 - Daily schedule through Windows Task Scheduler
-- Manual runs with live progress and a built-in log viewer
+- Manual runs with live, per-message progress and a built-in log viewer
+- A first-run checklist on the dashboard, plus archive size and message counts per account
+- Light, dark or follow-Windows theme; dates shown in the Persian (Jalali) calendar
 - Two backup runs can never overlap
 - No telemetry, no auto-update, no network traffic other than IMAP
 
@@ -66,11 +68,13 @@ The installer is written to `Output\ESFA-Mail-Backup-Setup.exe`.
 
 ## Usage
 
-1. Pick a destination folder and a daily run time under Settings.
+1. Pick and save a destination folder under Settings.
 2. Add your mail accounts. For Hetzner Mail the server is usually `mail.your-server.de:993`.
-3. Use **Test connection** first.
+3. Use **Test connection** in the account dialog first.
 4. Run **Start backup** once.
-5. Then enable the schedule.
+5. Then enable the daily schedule under Settings.
+
+Until all five are done, the dashboard shows a setup checklist that links to each step.
 
 ## MBOX export
 
@@ -98,8 +102,11 @@ Backed-up messages go only into the folder chosen by the user. Uninstalling the 
 ## Running the tests
 
 ```powershell
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
+
+`tests/test_dashboard.py` drives the real dashboard through NiceGUI's simulated user. IMAP, DPAPI, Task Scheduler and Explorer are replaced with fakes (`tests/conftest.py`), so the suite needs no network and changes nothing on the machine.
 
 ## Reporting a security issue
 

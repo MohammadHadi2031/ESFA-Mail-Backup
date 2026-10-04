@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mailbackup.backup_engine import BackupEngine, parse_list_response, safe_component
+from mailbackup.backup_engine import BackupEngine, archive_totals, parse_list_response, safe_component
 from mailbackup.imap_utf7 import decode
-from mailbackup.models import Account, Settings
+from mailbackup.models import Account, AccountResult, Settings
 from mailbackup.storage import SettingsStore, StateStore
 
 
@@ -100,6 +100,41 @@ def test_folder_backup_is_incremental_and_never_deletes(tmp_path: Path) -> None:
     assert downloaded_again == 0
     assert connection.fetches == 2
     assert all(path.exists() for path in files)
+
+
+def test_folder_backup_reports_message_progress(tmp_path: Path) -> None:
+    seen: list[tuple[int, int]] = []
+    BackupEngine()._backup_folder(FakeImap(), tmp_path, 'INBOX', 'INBOX', {'folders': {}}, lambda *step: seen.append(step))
+    assert seen == [(1, 2), (2, 2)]
+
+
+def test_archive_totals_count_only_finished_messages(tmp_path: Path) -> None:
+    folder = tmp_path / 'INBOX' / '17'
+    folder.mkdir(parents=True)
+    (folder / '1.eml').write_bytes(b'abc')
+    (folder / '2.eml').write_bytes(b'defgh')
+    (folder / '3.eml.part').write_bytes(b'partial download')
+    assert archive_totals(tmp_path) == (2, 8)
+    assert archive_totals(tmp_path / 'missing') == (0, 0)
+
+
+def test_successful_run_records_archive_totals_and_failures_keep_them(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / 'config.json')
+    account = Account(email='user@example.com', archived_messages=5, archived_bytes=50)
+    store.save(Settings(accounts=[account]))
+    engine = BackupEngine(settings_store=store, state_store=StateStore(tmp_path / 'state.json'))
+
+    engine._update_account_status(AccountResult(account.account_id, account.email, success=False, error='boom'))
+    saved = store.load().accounts[0]
+    assert saved.failed and (saved.archived_messages, saved.archived_bytes) == (5, 50)
+
+    engine._update_account_status(AccountResult(
+        account.account_id, account.email, new_messages=2, archived_messages=7, archived_bytes=70,
+    ))
+    saved = store.load().accounts[0]
+    assert not saved.failed
+    assert saved.last_status == '2 پیام جدید'
+    assert (saved.archived_messages, saved.archived_bytes) == (7, 70)
 
 
 def test_legacy_app_data_directory_is_migrated(tmp_path: Path, monkeypatch) -> None:

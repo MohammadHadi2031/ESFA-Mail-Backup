@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import imaplib
 import logging
+import os
 import re
 import ssl
 from pathlib import Path
@@ -16,6 +17,7 @@ from .storage import SettingsStore, StateStore
 
 
 ProgressCallback = Callable[[str, str, int, int], None]
+MessageProgressCallback = Callable[[int, int], None]
 LIST_PATTERN = re.compile(rb'^\((?P<flags>.*?)\)\s+(?P<delimiter>NIL|"(?:[^"\\]|\\.)*")\s+(?P<name>.+)$')
 
 
@@ -47,6 +49,24 @@ def parse_list_response(lines: Iterable[bytes | None]) -> list[tuple[str, str]]:
         encoded_name = _unquote_mailbox(match.group('name'))
         folders.append((encoded_name, decode_imap_utf7(encoded_name)))
     return folders
+
+
+def archive_totals(root: Path) -> tuple[int, int]:
+    """Count the stored .eml files under ``root`` and their total size in bytes."""
+    messages = size = 0
+    pending = [root]
+    while pending:
+        try:
+            with os.scandir(pending.pop()) as entries:
+                for entry in entries:
+                    if entry.is_dir(follow_symlinks=False):
+                        pending.append(Path(entry.path))
+                    elif entry.name.endswith('.eml'):
+                        messages += 1
+                        size += entry.stat(follow_symlinks=False).st_size
+        except OSError:
+            continue
+    return messages, size
 
 
 def _response_number(connection: imaplib.IMAP4_SSL, name: str, default: int) -> int:
@@ -87,7 +107,11 @@ class BackupEngine:
         with imaplib.IMAP4_SSL(account.server, account.port, ssl_context=context, timeout=30) as connection:
             connection.login(account.email, password)
 
-    def run_all(self, progress: ProgressCallback | None = None) -> BackupResult:
+    def run_all(
+        self,
+        progress: ProgressCallback | None = None,
+        message_progress: MessageProgressCallback | None = None,
+    ) -> BackupResult:
         settings = self.settings_store.load()
         if not settings.backup_root:
             raise ValueError('ابتدا پوشه مقصد بکاپ را در تنظیمات انتخاب کنید.')
@@ -98,7 +122,7 @@ class BackupEngine:
                 if not account.enabled:
                     continue
                 try:
-                    item = self._backup_account(account, settings, progress)
+                    item = self._backup_account(account, settings, progress, message_progress)
                 except Exception as exc:  # each account must not stop the others
                     self.logger.exception('Backup failed for %s', account.email)
                     item = AccountResult(account_id=account.account_id, email=account.email, success=False, error=str(exc))
@@ -111,6 +135,7 @@ class BackupEngine:
         account: Account,
         settings: Settings,
         progress: ProgressCallback | None,
+        message_progress: MessageProgressCallback | None = None,
     ) -> AccountResult:
         self.logger.info('Starting backup for %s', account.email)
         password = unprotect(account.password_token)
@@ -132,7 +157,9 @@ class BackupEngine:
             for folder_index, (wire_name, display_name) in enumerate(folders, start=1):
                 if progress:
                     progress(account.email, display_name, folder_index, total_folders)
-                downloaded = self._backup_folder(connection, account_root, wire_name, display_name, account_state)
+                downloaded = self._backup_folder(
+                    connection, account_root, wire_name, display_name, account_state, message_progress,
+                )
                 result.new_messages += downloaded
                 result.folders += 1
                 self.state_store.save(state)
@@ -140,6 +167,7 @@ class BackupEngine:
                 connection.logout()
             except imaplib.IMAP4.error:
                 pass
+        result.archived_messages, result.archived_bytes = archive_totals(account_root)
         self.logger.info('Finished backup for %s: %d new messages', account.email, result.new_messages)
         return result
 
@@ -150,6 +178,7 @@ class BackupEngine:
         wire_name: str,
         display_name: str,
         account_state: dict,
+        message_progress: MessageProgressCallback | None = None,
     ) -> int:
         status, _ = connection.select(_quote_mailbox(wire_name), readonly=True)
         if status != 'OK':
@@ -172,7 +201,9 @@ class BackupEngine:
             raise RuntimeError(f'جستجوی پیام‌ها در پوشه «{display_name}» ناموفق بود.')
         uids = values[0].split() if values and values[0] else []
         downloaded = 0
-        for uid in uids:
+        for position, uid in enumerate(uids, start=1):
+            if message_progress:
+                message_progress(position, len(uids))
             uid_text = uid.decode('ascii')
             target = folder_root / f'{uid_text}.eml'
             if target.exists():
@@ -197,7 +228,10 @@ class BackupEngine:
             if account.account_id == result.account_id:
                 account.last_run = result.finished_at
                 account.last_status = (
-                    f'{result.new_messages} پیام جدید' if result.success else f'خطا: {result.error[:120]}'
+                    f'{result.new_messages} پیام جدید' if result.success else f'خطا: {result.error[:300]}'
                 )
+                if result.success:
+                    account.archived_messages = result.archived_messages
+                    account.archived_bytes = result.archived_bytes
                 break
         self.settings_store.save(settings)
