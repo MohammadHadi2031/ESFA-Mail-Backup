@@ -1,5 +1,10 @@
 #define MyAppName "ESFA Mail Backup"
-#define MyAppVersion "1.0.0"
+; MyAppVersion is read from the VERSION file at the repo root (the single source of truth,
+; shared with mailbackup/__init__.py and the exe's own file-version resource in
+; EsfaMailBackup.spec) and passed in as /DMyAppVersion=... by the build command; see README.
+#ifndef MyAppVersion
+  #define MyAppVersion "0.0.0"
+#endif
 #define MyAppPublisher "ESFA Group"
 #define MyAppExeName "EsfaMailBackup.exe"
 

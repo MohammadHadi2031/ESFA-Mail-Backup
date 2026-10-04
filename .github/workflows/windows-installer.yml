@@ -26,6 +26,24 @@ jobs:
       - name: Run tests
         run: python -m pytest -q
 
+      - name: Read version
+        id: version
+        shell: powershell
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "VERSION file does not contain a plain x.y.z version: '$version'"
+          }
+          # On a tag push (v1.2.3), the tag and the VERSION file must agree, so a forgotten
+          # version bump fails the build instead of silently shipping the wrong number.
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $tagVersion = $env:GITHUB_REF -replace '^refs/tags/v', ''
+            if ($tagVersion -ne $version) {
+              throw "Tag v$tagVersion does not match VERSION file ($version)."
+            }
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
       - name: Build application
         run: python -m PyInstaller EsfaMailBackup.spec --noconfirm
 
@@ -34,11 +52,11 @@ jobs:
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y }
-          & $iscc installer.iss
+          & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" installer.iss
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: ESFA-Mail-Backup-Setup
+          name: ESFA-Mail-Backup-Setup-v${{ steps.version.outputs.version }}
           path: Output/ESFA-Mail-Backup-Setup.exe
           if-no-files-found: error

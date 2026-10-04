@@ -40,14 +40,17 @@ python app.py --browser
 
 ## ساخت فایل نصب ویندوز
 
-روش ساده، Push کردن پروژه در GitHub است. Workflow موجود در `.github/workflows/windows-installer.yml` روی ویندوز برنامه را با PyInstaller بسته‌بندی و Installer را با Inno Setup تولید می‌کند. فایل نهایی از بخش Actions قابل دانلود است.
+فایل [`VERSION`](VERSION) در ریشه پروژه تنها منبع شماره نسخه است: `mailbackup/__init__.py` آن را هنگام اجرا می‌خواند، `EsfaMailBackup.spec` آن را در اطلاعات نسخه فایل exe قرار می‌دهد، و به‌عنوان `AppVersion` به Inno Setup داده می‌شود. پیش از هر انتشار همین فایل را به‌روزرسانی کنید.
+
+روش ساده، Push کردن یک تگ هم‌نام با `VERSION` است (مثلاً تگ `v1.1.0` برای `VERSION` برابر `1.1.0`). Workflow موجود در `.github/workflows/windows-installer.yml` روی ویندوز برنامه را با PyInstaller بسته‌بندی و Installer را با Inno Setup تولید می‌کند؛ اگر تگ با `VERSION` یکی نباشد، ساخت متوقف می‌شود. فایل نهایی از بخش Actions قابل دانلود است.
 
 ساخت دستی:
 
 ```powershell
 python -m pip install -r requirements-dev.txt
 python -m PyInstaller EsfaMailBackup.spec --noconfirm
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+$version = (Get-Content VERSION -Raw).Trim()
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer.iss
 ```
 
 خروجی در مسیر `Output\ESFA-Mail-Backup-Setup.exe` ساخته می‌شود.

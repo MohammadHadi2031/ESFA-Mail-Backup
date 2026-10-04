@@ -54,14 +54,17 @@ python app.py --browser
 
 ## Building the Windows installer
 
-Push a `v*` tag and the [workflow](.github/workflows/windows-installer.yml) packages the app with PyInstaller and builds the installer with Inno Setup on a Windows runner; the result is downloadable from the Actions tab.
+The [`VERSION`](VERSION) file is the single source of truth for the version number: `mailbackup/__init__.py` reads it at runtime, `EsfaMailBackup.spec` embeds it in the `.exe`'s Windows file-version info, and it is passed to Inno Setup as `AppVersion`. Bump it before a release.
+
+Push a `v*` tag matching `VERSION` (e.g. tag `v1.1.0` for a `VERSION` of `1.1.0`) and the [workflow](.github/workflows/windows-installer.yml) packages the app with PyInstaller and builds the installer with Inno Setup on a Windows runner; the build fails if the tag and `VERSION` disagree. The result is downloadable from the Actions tab.
 
 Manual build:
 
 ```powershell
 python -m pip install -r requirements-dev.txt
 python -m PyInstaller EsfaMailBackup.spec --noconfirm
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+$version = (Get-Content VERSION -Raw).Trim()
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer.iss
 ```
 
 The installer is written to `Output\ESFA-Mail-Backup-Setup.exe`.
