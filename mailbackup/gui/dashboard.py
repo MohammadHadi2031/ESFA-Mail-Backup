@@ -236,6 +236,7 @@ class Dashboard:
         self.setup_steps.refresh()
         self.stats.refresh()
         self.account_list.refresh()
+        self.verification_tips.refresh()
         self.runtime_status.refresh()
 
     # --------------------------------------------------------------- dashboard
@@ -245,6 +246,28 @@ class Dashboard:
         self.setup_steps()
         self.stats()
         self.account_list()
+        self.verification_tips()
+
+    @ui.refreshable
+    def verification_tips(self) -> None:
+        settings = self.store.load()
+        if not any(account.archived_messages for account in settings.accounts):
+            return  # nothing backed up yet to verify
+        with ui.element('div').classes('panel panel-pad').mark('verification-tips'):
+            ui.label('مطمئن شوید بکاپ سالم است').classes('panel-title')
+            ui.label('هر فایل دقیقاً یک پیام ایمیل استاندارد است؛ نیازی به خود برنامه برای بازبینی نیست.').classes('panel-sub')
+            with ui.element('div').classes('facts mt-3'):
+                for icon, text in (
+                    ('mail_outline', 'روی «بازکردن پوشه» بزنید و یک فایل ‎.eml را دابل‌کلیک کنید؛ '
+                     'ویندوز آن را با برنامه ایمیل پیش‌فرض (مثلاً Outlook) باز می‌کند و متن و پیوست را می‌بینید.'),
+                    ('inventory_2', 'برای مرور همه پیام‌های یک پوشه در یک‌جا، «خروجی MBOX» را بزنید و فایل ساخته‌شده را '
+                     'در Thunderbird ایمپورت کنید.'),
+                    ('fact_check', 'تعداد «پیام‌های آرشیوشده» در آمار بالا باید با تعداد واقعی پیام‌های آن حساب روی سرور '
+                     'یکی باشد؛ جزئیات هر اجرا هم در تب «گزارش‌ها» ثبت می‌شود.'),
+                ):
+                    with ui.element('div').classes('fact'):
+                        ui.icon(icon, size='18px')
+                        ui.label(text)
 
     def _overall_status(self, settings: Settings) -> tuple[str, str, str, str]:
         if self.job and self.job.kind == 'backup':

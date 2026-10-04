@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import multiprocessing
+import sys
+from pathlib import Path
 
 from mailbackup.backup_engine import BackupEngine
 from mailbackup.logging_setup import configure_logging
@@ -41,6 +43,11 @@ from mailbackup.gui.dashboard import Dashboard  # noqa: E402
 from mailbackup.gui.theme import FAVICON  # noqa: E402
 
 
+# Native window icon (title bar / taskbar): same mark as the exe icon, bundled by PyInstaller.
+ASSETS_DIR = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets'
+WINDOW_ICON = ASSETS_DIR / 'app.ico'
+
+
 @ui.page('/')
 def index() -> None:
     Dashboard(logger=LOGGER, native=not ARGS.browser).build()
@@ -51,7 +58,7 @@ if __name__ == '__main__':
     run_options = dict(
         host='127.0.0.1',
         title='ESFA Mail Backup',
-        favicon=FAVICON,
+        favicon=FAVICON if ARGS.browser else WINDOW_ICON,
         native=not ARGS.browser,
         reload=False,
         port=ARGS.port,

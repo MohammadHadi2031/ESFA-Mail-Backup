@@ -321,3 +321,15 @@ async def test_log_view_highlights_problems_and_filters_them(user: User, env) ->
         toggle.value = 'problems'
     await user.should_not_see('Starting backup for user@example.com')
     await user.should_see('Backup failed for user@example.com')
+
+
+async def test_verification_tips_appear_only_after_a_backup_exists(user: User, env, account_factory) -> None:
+    env.seed(backup_root=str(env.root / 'backup'), accounts=[account_factory()])
+    await user.open('/')
+    await user.should_not_see(marker='verification-tips')
+
+    env.seed(backup_root=str(env.root / 'backup'),
+             accounts=[account_factory(last_run='2026-01-01T01:00:00', archived_messages=3, archived_bytes=900)])
+    await user.open('/')
+    await user.should_see(marker='verification-tips')
+    await user.should_see('Thunderbird')

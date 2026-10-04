@@ -54,6 +54,8 @@ python app.py --browser
 
 ## Building the Windows installer
 
+One command does everything (dependencies, tests, PyInstaller, Inno Setup): `powershell -ExecutionPolicy Bypass -File toolsuild-installer.ps1` (`-SkipTests`, `-NoClean` available).
+
 The [`VERSION`](VERSION) file is the single source of truth for the version number: `mailbackup/__init__.py` reads it at runtime, `EsfaMailBackup.spec` embeds it in the `.exe`'s Windows file-version info, and it is passed to Inno Setup as `AppVersion`. Bump it before a release.
 
 Push a `v*` tag matching `VERSION` (e.g. tag `v1.1.0` for a `VERSION` of `1.1.0`) and the [workflow](.github/workflows/windows-installer.yml) packages the app with PyInstaller and builds the installer with Inno Setup on a Windows runner; the build fails if the tag and `VERSION` disagree. The result is downloadable from the Actions tab.
@@ -99,6 +101,8 @@ Settings and logs:
 ```text
 %LOCALAPPDATA%\EsfaMailBackup
 ```
+
+To check a backup, open **Open folder** and double-click any `.eml` file (it opens in your default mail client, e.g. Outlook), or use **Export MBOX** and import the result into Thunderbird. The dashboard shows this tip once a backup exists.
 
 Backed-up messages go only into the folder chosen by the user. Uninstalling the application removes neither the backups nor the settings.
 

@@ -31,7 +31,7 @@ a = Analysis(
     ['app.py'],
     pathex=[],
     binaries=[],
-    datas=[('VERSION', '.')],
+    datas=[('VERSION', '.'), ('assets/app.ico', 'assets')],
     hiddenimports=[
         'webview.platforms.edgechromium',
         'webview.platforms.winforms',
@@ -58,6 +58,7 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     version=version_info,
+    icon='assets/app.ico',
 )
 coll = COLLECT(
     exe,
