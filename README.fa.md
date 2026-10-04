@@ -40,7 +40,13 @@ python app.py --browser
 
 ## ساخت فایل نصب ویندوز
 
-یک دستور همه مراحل را انجام می‌دهد (وابستگی‌ها، تست‌ها، PyInstaller و Inno Setup): `powershell -ExecutionPolicy Bypass -File toolsuild-installer.ps1` (گزینه‌های `-SkipTests` و `-NoClean` موجودند).
+ساده‌ترین راه، اسکریپت ساخت است که همه مراحل را یک‌جا انجام می‌دهد (نصب وابستگی‌ها، اجرای تست‌ها، بسته‌بندی با PyInstaller و ساخت Installer با Inno Setup که باید نصب باشد):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
+```
+
+گزینه‌ها: `-SkipTests` اجرای تست‌ها را رد می‌کند و `-NoClean` پوشه‌های قبلی `build`، `dist` و `Output` را نگه می‌دارد. خروجی در `Output\ESFA-Mail-Backup-Setup.exe` ساخته می‌شود.
 
 فایل [`VERSION`](VERSION) در ریشه پروژه تنها منبع شماره نسخه است: `mailbackup/__init__.py` آن را هنگام اجرا می‌خواند، `EsfaMailBackup.spec` آن را در اطلاعات نسخه فایل exe قرار می‌دهد، و به‌عنوان `AppVersion` به Inno Setup داده می‌شود. پیش از هر انتشار همین فایل را به‌روزرسانی کنید.
 

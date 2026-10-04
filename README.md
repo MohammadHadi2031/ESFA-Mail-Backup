@@ -54,7 +54,13 @@ python app.py --browser
 
 ## Building the Windows installer
 
-One command does everything (dependencies, tests, PyInstaller, Inno Setup): `powershell -ExecutionPolicy Bypass -File toolsuild-installer.ps1` (`-SkipTests`, `-NoClean` available).
+The easiest way is the build script, which does everything in one go (installs dependencies, runs the tests, packages the app with PyInstaller, then compiles the installer with Inno Setup, which must be installed):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
+```
+
+Options: `-SkipTests` skips the test run, `-NoClean` keeps the previous `build`, `dist` and `Output` folders. The installer is written to `Output\ESFA-Mail-Backup-Setup.exe`.
 
 The [`VERSION`](VERSION) file is the single source of truth for the version number: `mailbackup/__init__.py` reads it at runtime, `EsfaMailBackup.spec` embeds it in the `.exe`'s Windows file-version info, and it is passed to Inno Setup as `AppVersion`. Bump it before a release.
 
